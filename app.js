@@ -1,4 +1,4 @@
-// KeyFlow - Timer logic
+// KeyFlow - Results panel on test end
 let mode = 15;
 let words = [];
 let currentWord = 0;
@@ -9,11 +9,19 @@ let finished = false;
 let timeLeft = 15;
 let timerInterval = null;
 let startTime = null;
+let totalKeystrokes = 0;
+let wrongKeystrokes = 0;
+let correctWords = 0;
 
 const timerDisplay = document.getElementById('timerDisplay');
 const wordsDisplay = document.getElementById('wordsDisplay');
 const hiddenInput  = document.getElementById('hiddenInput');
 const resetBtn     = document.getElementById('resetBtn');
+const liveWpm      = document.getElementById('liveWpm');
+const liveAcc      = document.getElementById('liveAcc');
+const liveWords    = document.getElementById('liveWords');
+const freeWordStat = document.getElementById('freeWordStat');
+const resultsPanel = document.getElementById('resultsPanel');
 
 function updateTimerDisplay() {
   if (mode === 'free') {
@@ -27,23 +35,52 @@ function updateTimerDisplay() {
   }
 }
 
+function updateLiveStats() {
+  if (!started) return;
+  const elapsed = (Date.now() - startTime) / 60000;
+  if (elapsed === 0) return;
+  const wpm = Math.max(0, Math.round((totalKeystrokes - wrongKeystrokes) / 5 / elapsed));
+  const acc = totalKeystrokes > 0 ? Math.round(((totalKeystrokes - wrongKeystrokes) / totalKeystrokes) * 100) : 100;
+  liveWpm.textContent = wpm;
+  liveAcc.textContent = acc + '%';
+  liveWords.textContent = correctWords;
+}
+
 function startTimer() {
   if (mode === 'free') return;
   timerInterval = setInterval(() => {
     timeLeft--;
     updateTimerDisplay();
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      endTest();
-    }
+    updateLiveStats();
+    if (timeLeft <= 0) { clearInterval(timerInterval); endTest(); }
   }, 1000);
+}
+
+function checkWordCorrect(wi) {
+  const typed = typedHistory[wi] || [];
+  const word = words[wi];
+  return typed.length === word.length && typed.every((ch, i) => ch === word[i]);
 }
 
 function endTest() {
   finished = true;
   clearInterval(timerInterval);
+
+  const elapsed = (Date.now() - startTime) / 60000;
+  let cw = 0;
+  for (let wi = 0; wi < words.length; wi++) { if (checkWordCorrect(wi)) cw++; }
+
+  const rawWpm = Math.round(totalKeystrokes / 5 / elapsed);
+  const wpm    = Math.round(Math.max(0, (totalKeystrokes - wrongKeystrokes) / 5 / elapsed));
+  const acc    = totalKeystrokes > 0 ? Math.round(((totalKeystrokes - wrongKeystrokes) / totalKeystrokes) * 100) : 100;
+
+  document.getElementById('resWpm').textContent    = wpm;
+  document.getElementById('resRaw').textContent    = rawWpm;
+  document.getElementById('resAcc').textContent    = acc + '%';
+  document.getElementById('resCorrect').textContent = cw;
+
+  resultsPanel.classList.add('visible');
   hiddenInput.blur();
-  alert('Time is up! Refresh or press Tab to try again.');
 }
 
 function renderWords() {
@@ -53,7 +90,6 @@ function renderWords() {
     wordEl.className = 'word';
     wordEl.id = `w${wi}`;
     const typed = typedHistory[wi] || [];
-
     word.split('').forEach((ch, ci) => {
       const span = document.createElement('span');
       span.className = 'letter';
@@ -80,7 +116,7 @@ function renderWords() {
   if (wordEl) wordsDisplay.scrollTop = Math.max(0, wordEl.offsetTop - 40);
 }
 
-hiddenInput.addEventListener('input', (e) => {
+hiddenInput.addEventListener('input', () => {
   if (finished) return;
   const val = hiddenInput.value;
   if (!val) return;
@@ -96,6 +132,7 @@ hiddenInput.addEventListener('input', (e) => {
 
   if (ch === ' ') {
     if (typedHistory[currentWord] && typedHistory[currentWord].length > 0) {
+      if (checkWordCorrect(currentWord)) correctWords++;
       currentWord++;
       currentChar = 0;
       if (currentWord >= words.length) { endTest(); return; }
@@ -105,8 +142,12 @@ hiddenInput.addEventListener('input', (e) => {
     if (!typedHistory[currentWord]) typedHistory[currentWord] = [];
     typedHistory[currentWord].push(ch);
     currentChar = typedHistory[currentWord].length;
+    totalKeystrokes++;
+    if (ch !== words[currentWord][typedHistory[currentWord].length - 1]) wrongKeystrokes++;
   }
+
   renderWords();
+  updateLiveStats();
 });
 
 hiddenInput.addEventListener('keydown', (e) => {
@@ -133,6 +174,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.classList.add('active');
     const m = btn.dataset.mode;
     mode = m === 'free' ? 'free' : parseInt(m);
+    freeWordStat.style.display = mode === 'free' ? 'flex' : 'none';
     resetTest();
   });
 });
@@ -144,7 +186,12 @@ function resetTest() {
   words = generateWords();
   currentWord = 0; currentChar = 0; typedHistory = [];
   started = false; finished = false;
+  totalKeystrokes = 0; wrongKeystrokes = 0; correctWords = 0;
   timeLeft = typeof mode === 'number' ? mode : 0;
+  liveWpm.textContent = 'â€”';
+  liveAcc.textContent = 'â€”';
+  liveWords.textContent = '0';
+  resultsPanel.classList.remove('visible');
   updateTimerDisplay();
   wordsDisplay.scrollTop = 0;
   renderWords();
