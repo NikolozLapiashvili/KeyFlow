@@ -1,4 +1,3 @@
-// KeyFlow - Results panel on test end
 let mode = 15;
 let words = [];
 let currentWord = 0;
