@@ -1,4 +1,4 @@
-// KeyFlow - Typing input & character feedback
+// KeyFlow - Timer logic
 let mode = 15;
 let words = [];
 let currentWord = 0;
@@ -6,6 +6,9 @@ let currentChar = 0;
 let typedHistory = [];
 let started = false;
 let finished = false;
+let timeLeft = 15;
+let timerInterval = null;
+let startTime = null;
 
 const timerDisplay = document.getElementById('timerDisplay');
 const wordsDisplay = document.getElementById('wordsDisplay');
@@ -18,15 +21,33 @@ function updateTimerDisplay() {
     timerDisplay.style.fontSize = '2rem';
     timerDisplay.className = 'timer-display';
   } else {
-    timerDisplay.textContent = mode;
+    timerDisplay.textContent = timeLeft;
     timerDisplay.style.fontSize = '';
-    timerDisplay.className = 'timer-display';
+    timerDisplay.className = 'timer-display' + (timeLeft <= 5 ? ' urgent' : '');
   }
+}
+
+function startTimer() {
+  if (mode === 'free') return;
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      endTest();
+    }
+  }, 1000);
+}
+
+function endTest() {
+  finished = true;
+  clearInterval(timerInterval);
+  hiddenInput.blur();
+  alert('Time is up! Refresh or press Tab to try again.');
 }
 
 function renderWords() {
   wordsDisplay.innerHTML = '<div class="click-hint' + (started ? ' hidden' : '') + '">Click here or press any key to start</div>';
-
   words.forEach((word, wi) => {
     const wordEl = document.createElement('span');
     wordEl.className = 'word';
@@ -37,20 +58,14 @@ function renderWords() {
       const span = document.createElement('span');
       span.className = 'letter';
       span.textContent = ch;
-
       if (wi < currentWord) {
         span.className = 'letter ' + (typed[ci] === ch ? 'correct' : 'wrong');
       } else if (wi === currentWord) {
-        if (ci < typed.length) {
-          span.className = 'letter ' + (typed[ci] === ch ? 'correct' : 'wrong');
-        } else if (ci === typed.length) {
-          span.className = 'letter cursor-char';
-        }
+        if (ci < typed.length) span.className = 'letter ' + (typed[ci] === ch ? 'correct' : 'wrong');
+        else if (ci === typed.length) span.className = 'letter cursor-char';
       }
       wordEl.appendChild(span);
     });
-
-    // extra typed characters beyond word length
     if (wi === currentWord && typed.length > word.length) {
       for (let ei = word.length; ei < typed.length; ei++) {
         const span = document.createElement('span');
@@ -59,11 +74,8 @@ function renderWords() {
         wordEl.appendChild(span);
       }
     }
-
     wordsDisplay.appendChild(wordEl);
   });
-
-  // scroll current word into view
   const wordEl = document.getElementById(`w${currentWord}`);
   if (wordEl) wordsDisplay.scrollTop = Math.max(0, wordEl.offsetTop - 40);
 }
@@ -77,6 +89,8 @@ hiddenInput.addEventListener('input', (e) => {
 
   if (!started) {
     started = true;
+    startTime = Date.now();
+    startTimer();
     document.querySelector('.click-hint')?.classList.add('hidden');
   }
 
@@ -84,7 +98,7 @@ hiddenInput.addEventListener('input', (e) => {
     if (typedHistory[currentWord] && typedHistory[currentWord].length > 0) {
       currentWord++;
       currentChar = 0;
-      if (currentWord >= words.length) return;
+      if (currentWord >= words.length) { endTest(); return; }
       typedHistory[currentWord] = typedHistory[currentWord] || [];
     }
   } else {
@@ -92,7 +106,6 @@ hiddenInput.addEventListener('input', (e) => {
     typedHistory[currentWord].push(ch);
     currentChar = typedHistory[currentWord].length;
   }
-
   renderWords();
 });
 
@@ -101,13 +114,8 @@ hiddenInput.addEventListener('keydown', (e) => {
   if (e.key === 'Backspace') {
     e.preventDefault();
     const typed = typedHistory[currentWord];
-    if (typed && typed.length > 0) {
-      typed.pop();
-      currentChar = typed.length;
-    } else if (currentWord > 0) {
-      currentWord--;
-      currentChar = (typedHistory[currentWord] || []).length;
-    }
+    if (typed && typed.length > 0) { typed.pop(); currentChar = typed.length; }
+    else if (currentWord > 0) { currentWord--; currentChar = (typedHistory[currentWord] || []).length; }
     renderWords();
   }
 });
@@ -132,12 +140,11 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
 resetBtn.addEventListener('click', resetTest);
 
 function resetTest() {
+  clearInterval(timerInterval);
   words = generateWords();
-  currentWord = 0;
-  currentChar = 0;
-  typedHistory = [];
-  started = false;
-  finished = false;
+  currentWord = 0; currentChar = 0; typedHistory = [];
+  started = false; finished = false;
+  timeLeft = typeof mode === 'number' ? mode : 0;
   updateTimerDisplay();
   wordsDisplay.scrollTop = 0;
   renderWords();
