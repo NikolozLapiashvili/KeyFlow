@@ -1,4 +1,3 @@
-//Word list for the generator
 const WORDS = [
   "the","be","to","of","and","a","in","that","have","it","for","not","on","with",
   "he","as","you","do","at","this","but","his","by","from","they","we","say","her",
