@@ -30,8 +30,47 @@
     <input class="hidden-input" id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
+  <div class="live-stats">
+    <div class="stat-item">
+      <div class="stat-value" id="liveWpm">—</div>
+      <div class="stat-label">WPM</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="liveAcc">—</div>
+      <div class="stat-label">Accuracy</div>
+    </div>
+    <div class="stat-item" id="freeWordStat" style="display:none">
+      <div class="stat-value" id="liveWords">0</div>
+      <div class="stat-label">Words</div>
+    </div>
+  </div>
+
   <div class="controls">
     <button class="btn btn-primary" id="resetBtn">↺ Restart <kbd>Tab</kbd></button>
+  </div>
+
+  <!-- RESULTS PANEL -->
+  <div class="results-panel" id="resultsPanel">
+    <div class="results-title">// Results</div>
+    <div class="results-grid">
+      <div class="result-item">
+        <div class="result-value" id="resWpm">0</div>
+        <div class="result-label">WPM</div>
+      </div>
+      <div class="result-item secondary">
+        <div class="result-value" id="resRaw">0</div>
+        <div class="result-label">Raw WPM</div>
+      </div>
+      <div class="result-item secondary">
+        <div class="result-value" id="resAcc">0%</div>
+        <div class="result-label">Accuracy</div>
+      </div>
+      <div class="result-item secondary">
+        <div class="result-value" id="resCorrect">0</div>
+        <div class="result-label">Correct Words</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="resetTest()">↺ Try Again</button>
   </div>
 </div>
 <script src="words.js"></script>
